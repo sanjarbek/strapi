@@ -1,6 +1,6 @@
 import React from 'react';
 import { Switch, Route, useRouteMatch, Redirect, useLocation } from 'react-router-dom';
-import { CheckPagePermissions, LoadingIndicatorPage, NotFound } from '@strapi/helper-plugin';
+import { CheckPagePermissions, LoadingIndicatorPage, NotFound, TP } from '@strapi/helper-plugin';
 import permissions from '../../../permissions';
 import DragLayer from '../../components/DragLayer';
 import ModelsContext from '../../contexts/ModelsContext';
@@ -45,7 +45,7 @@ const App = () => {
   }
 
   return (
-    <>
+    <TP>
       <DragLayer />
       <ModelsContext.Provider value={{ refetchData }}>
         <div className="container-fluid">
@@ -81,7 +81,7 @@ const App = () => {
           </div>
         </div>
       </ModelsContext.Provider>
-    </>
+    </TP>
   );
 };
 

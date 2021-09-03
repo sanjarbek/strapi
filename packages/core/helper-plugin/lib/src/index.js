@@ -184,3 +184,4 @@ export { default as Status } from './components/Status';
 
 // New icons
 export { default as SortIcon } from './icons/SortIcon';
+export { default as TP } from './tmp/TP';
