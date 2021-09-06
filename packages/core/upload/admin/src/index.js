@@ -25,15 +25,15 @@ export default {
     app.addComponents({ name: 'media-library', Component: InputModalStepper });
 
     // TODO
-    // app.addCorePluginMenuLink({
-    //   to: `/plugins/${pluginId}`,
-    //   icon,
-    //   intlLabel: {
-    //     id: `${pluginId}.plugin.name`,
-    //     defaultMessage: 'Media Library',
-    //   },
-    //   permissions: pluginPermissions.main,
-    // });
+    app.addCorePluginMenuLink({
+      to: `/plugins/${pluginId}`,
+      icon,
+      intlLabel: {
+        id: `${pluginId}.plugin.name`,
+        defaultMessage: 'Media Library',
+      },
+      permissions: pluginPermissions.main,
+    });
 
     // TODO update guide
     app.addFields({ type: 'media', Component: InputMedia });
