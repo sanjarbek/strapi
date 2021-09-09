@@ -14,6 +14,7 @@ import {
   Th,
   TableLabel,
   useNotifyAT,
+  Box,
 } from '@strapi/parts';
 
 import { AddIcon, EditIcon } from '@strapi/icons';
@@ -25,9 +26,13 @@ import {
   useNotification,
   CustomContentLayout,
   useRBAC,
+  Search,
+  useQueryParams,
+  EmptyStateLayout,
 } from '@strapi/helper-plugin';
 import { useHistory } from 'react-router-dom';
 import { useQuery } from 'react-query';
+import matchSorter from 'match-sorter';
 
 import { fetchData } from './utils/api';
 import { getTrad } from '../../../utils';
@@ -40,13 +45,15 @@ const RoleListPage = () => {
   const { push } = useHistory();
   const toggleNotification = useNotification();
   const { notifyStatus } = useNotifyAT();
+  const [{ query }] = useQueryParams();
+  const _q = query?._q || '';
 
   const updatePermissions = useMemo(() => {
     return {
-      update: permissions.updateRole,
       create: permissions.createRole,
-      delete: permissions.deleteRole,
       read: permissions.readRoles,
+      update: permissions.updateRole,
+      delete: permissions.deleteRole,
     };
   }, []);
 
@@ -73,9 +80,27 @@ const RoleListPage = () => {
     defaultMessage: 'Roles',
   });
 
-  const handleClickEdit = (id) => {
+  const handleClickEdit = id => {
     push(`/settings/${pluginId}/roles/${id}`);
   };
+
+  const emptyLayout = {
+    roles: {
+      id: getTrad('Roles.empty'),
+      defaultMessage: "You don't have any roles yet.",
+    },
+    search: {
+      id: getTrad('Roles.empty.search'),
+      defaultMessage: 'No roles match the search.',
+    },
+  };
+
+  const sortedRoles = matchSorter(roles || [], _q, { keys: ['name', 'description'] });
+  const emptyContent = _q && !sortedRoles.length ? 'search' : 'roles';
+  const rolesList = sortedRoles.length ? sortedRoles : roles;
+
+  const colCount = 4;
+  const rowCount = roles && roles.length + 1;
 
   return (
     <Layout>
@@ -103,41 +128,41 @@ const RoleListPage = () => {
             </CheckPermissions>
           }
         />
-
-        <CustomContentLayout
-          canRead={canRead}
-          shouldShowEmptyState={roles && !roles.length}
-          isLoading={isLoading || isLoadingForPermissions}
-        >
-          <Table colCount={4} rowCount={roles && roles.length + 1}>
-            <Thead>
-              <Tr>
-                <Th>
-                  <TableLabel>
-                    {formatMessage({ id: getTrad('Roles.name'), defaultMessage: 'Name' })}
-                  </TableLabel>
-                </Th>
-                <Th>
-                  <TableLabel>
-                    {formatMessage({
-                      id: getTrad('Roles.description'),
-                      defaultMessage: 'Description',
-                    })}
-                  </TableLabel>
-                </Th>
-                <Th>
-                  <TableLabel>
-                    {formatMessage({
-                      id: getTrad('Roles.users'),
-                      defaultMessage: 'Users',
-                    })}
-                  </TableLabel>
-                </Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {roles &&
-                roles.map((role) => (
+        <CustomContentLayout canRead={canRead} isLoading={isLoading || isLoadingForPermissions}>
+          <Box paddingBottom={4}>
+            <Search />
+          </Box>
+          {!roles?.length || !sortedRoles?.length ? (
+            <EmptyStateLayout content={emptyLayout[emptyContent]} />
+          ) : (
+            <Table colCount={colCount} rowCount={rowCount}>
+              <Thead>
+                <Tr>
+                  <Th>
+                    <TableLabel>
+                      {formatMessage({ id: getTrad('Roles.name'), defaultMessage: 'Name' })}
+                    </TableLabel>
+                  </Th>
+                  <Th>
+                    <TableLabel>
+                      {formatMessage({
+                        id: getTrad('Roles.description'),
+                        defaultMessage: 'Description',
+                      })}
+                    </TableLabel>
+                  </Th>
+                  <Th>
+                    <TableLabel>
+                      {formatMessage({
+                        id: getTrad('Roles.users'),
+                        defaultMessage: 'Users',
+                      })}
+                    </TableLabel>
+                  </Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {rolesList?.map(role => (
                   <Tr key={role.name}>
                     <Td width="20%">
                       <Text>{role.name}</Text>
@@ -165,8 +190,9 @@ const RoleListPage = () => {
                     </Td>
                   </Tr>
                 ))}
-            </Tbody>
-          </Table>
+              </Tbody>
+            </Table>
+          )}
         </CustomContentLayout>
       </Main>
     </Layout>
