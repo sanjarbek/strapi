@@ -1,15 +1,11 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Button,
   HeaderLayout,
-  IconButton,
   Layout,
   Main,
   Table,
-  Tbody,
-  Text,
   Tr,
-  Td,
   Thead,
   Th,
   TableLabel,
@@ -18,9 +14,7 @@ import {
   Row,
   VisuallyHidden,
 } from '@strapi/parts';
-
-import { AddIcon, EditIcon, DeleteIcon } from '@strapi/icons';
-import { useIntl } from 'react-intl';
+import { AddIcon } from '@strapi/icons';
 import {
   useTracking,
   SettingsPageTitle,
@@ -33,6 +27,7 @@ import {
   EmptyStateLayout,
   ConfirmDialog,
 } from '@strapi/helper-plugin';
+import { useIntl } from 'react-intl';
 import { useHistory } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import matchSorter from 'match-sorter';
@@ -41,6 +36,7 @@ import { fetchData, deleteData } from './utils/api';
 import { getTrad } from '../../../utils';
 import pluginId from '../../../pluginId';
 import permissions from '../../../permissions';
+import TableBody from './components/TableBody';
 
 const RoleListPage = () => {
   const { trackUsage } = useTracking();
@@ -83,10 +79,6 @@ const RoleListPage = () => {
     push(`/settings/${pluginId}/roles/new`);
   };
 
-  const handleClickEdit = id => {
-    push(`/settings/${pluginId}/roles/${id}`);
-  };
-
   const handleShowConfirmDelete = () => {
     setShowConfirmDelete(!showConfirmDelete);
   };
@@ -123,27 +115,11 @@ const RoleListPage = () => {
     },
   });
 
-  const checkCanDeleteRole = useCallback(
-    role => {
-      return canDelete && !['public', 'authenticated'].includes(role.type);
-    },
-    [canDelete]
-  );
-
-  const handleClickDelete = id => {
-    setRoleToDelete(id);
-    setShowConfirmDelete(!showConfirmDelete);
-  };
-
   const handleConfirmDelete = async () => {
-    try {
-      setIsConfirmButtonLoading(true);
-      await deleteMutation.mutateAsync(roleToDelete);
-      setShowConfirmDelete(!showConfirmDelete);
-      setIsConfirmButtonLoading(false);
-    } catch (error) {
-      console.log(error);
-    }
+    setIsConfirmButtonLoading(true);
+    await deleteMutation.mutateAsync(roleToDelete);
+    setShowConfirmDelete(!showConfirmDelete);
+    setIsConfirmButtonLoading(false);
   };
 
   const sortedRoles = matchSorter(roles || [], _q, { keys: ['name', 'description'] });
@@ -221,48 +197,14 @@ const RoleListPage = () => {
                   </Th>
                 </Tr>
               </Thead>
-              <Tbody>
-                {sortedRoles?.map(role => (
-                  <Tr key={role.name}>
-                    <Td width="20%">
-                      <Text>{role.name}</Text>
-                    </Td>
-                    <Td width="50%">
-                      <Text>{role.description}</Text>
-                    </Td>
-                    <Td width="30%">
-                      <Text>
-                        {`${role.nb_users} ${formatMessage({
-                          id: getTrad('Roles.users'),
-                          defaultMessage: 'users',
-                        }).toLowerCase()}`}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Row>
-                        <CheckPermissions permissions={permissions.updateRole}>
-                          <IconButton
-                            onClick={() => handleClickEdit(role.id)}
-                            noBorder
-                            icon={<EditIcon />}
-                            label="Edit"
-                          />
-                        </CheckPermissions>
-                        {checkCanDeleteRole(role) && (
-                          <CheckPermissions permissions={permissions.deleteRole}>
-                            <IconButton
-                              onClick={() => handleClickDelete(role.id)}
-                              noBorder
-                              icon={<DeleteIcon />}
-                              label="Delete"
-                            />
-                          </CheckPermissions>
-                        )}
-                      </Row>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
+              <TableBody
+                sortedRoles={sortedRoles}
+                canDelete={canDelete}
+                permissions={permissions}
+                setRoleToDelete={setRoleToDelete}
+                setShowConfirmDelete={setShowConfirmDelete}
+                showConfirmDelete={showConfirmDelete}
+              />
             </Table>
           )}
         </CustomContentLayout>
