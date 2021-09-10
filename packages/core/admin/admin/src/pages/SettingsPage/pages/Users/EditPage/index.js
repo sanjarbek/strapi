@@ -50,7 +50,7 @@ const EditPage = ({ canUpdate }) => {
   const { status, data } = useQuery(['user', id], () => fetchUser(id), {
     retry: false,
     keepPreviousData: false,
-    staleTime: 1000 * 20,
+    staleTime: 0,
     onError: err => {
       const status = err.response.status;
 
@@ -150,6 +150,7 @@ const EditPage = ({ canUpdate }) => {
     <Main labelledBy="title">
       <SettingsPageTitle name="Users" />
       <Formik
+        enableReinitialize
         onSubmit={handleSubmit}
         initialValues={initialData}
         validateOnChange={false}
