@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   Button,
   HeaderLayout,
@@ -19,7 +19,7 @@ import {
   VisuallyHidden,
 } from '@strapi/parts';
 
-import { AddIcon, EditIcon } from '@strapi/icons';
+import { AddIcon, EditIcon, DeleteIcon } from '@strapi/icons';
 import { useIntl } from 'react-intl';
 import {
   useTracking,
@@ -31,12 +31,13 @@ import {
   Search,
   useQueryParams,
   EmptyStateLayout,
+  ConfirmDialog,
 } from '@strapi/helper-plugin';
 import { useHistory } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
 import matchSorter from 'match-sorter';
 
-import { fetchData } from './utils/api';
+import { fetchData, deleteData } from './utils/api';
 import { getTrad } from '../../../utils';
 import pluginId from '../../../pluginId';
 import permissions from '../../../permissions';
@@ -49,6 +50,11 @@ const RoleListPage = () => {
   const { notifyStatus } = useNotifyAT();
   const [{ query }] = useQueryParams();
   const _q = query?._q || '';
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [isConfirmButtonLoading, setIsConfirmButtonLoading] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState();
+
+  const queryClient = useQueryClient();
 
   const updatePermissions = useMemo(() => {
     return {
@@ -61,7 +67,7 @@ const RoleListPage = () => {
 
   const {
     isLoading: isLoadingForPermissions,
-    allowedActions: { canRead },
+    allowedActions: { canRead, canDelete },
   } = useRBAC(updatePermissions);
 
   const {
@@ -77,13 +83,12 @@ const RoleListPage = () => {
     push(`/settings/${pluginId}/roles/new`);
   };
 
-  const pageTitle = formatMessage({
-    id: getTrad('HeaderNav.link.roles'),
-    defaultMessage: 'Roles',
-  });
-
   const handleClickEdit = id => {
     push(`/settings/${pluginId}/roles/${id}`);
+  };
+
+  const handleShowConfirmDelete = () => {
+    setShowConfirmDelete(!showConfirmDelete);
   };
 
   const emptyLayout = {
@@ -95,6 +100,50 @@ const RoleListPage = () => {
       id: getTrad('Roles.empty.search'),
       defaultMessage: 'No roles match the search.',
     },
+  };
+
+  const pageTitle = formatMessage({
+    id: getTrad('HeaderNav.link.roles'),
+    defaultMessage: 'Roles',
+  });
+
+  const deleteMutation = useMutation(id => deleteData(id), {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries('get-roles');
+    },
+    onError: err => {
+      if (err?.response?.data?.data) {
+        toggleNotification({ type: 'warning', message: err.response.data.data });
+      } else {
+        toggleNotification({
+          type: 'warning',
+          message: { id: 'notification.error', defaultMessage: 'An error occured' },
+        });
+      }
+    },
+  });
+
+  const checkCanDeleteRole = useCallback(
+    role => {
+      return canDelete && !['public', 'authenticated'].includes(role.type);
+    },
+    [canDelete]
+  );
+
+  const handleClickDelete = id => {
+    setRoleToDelete(id);
+    setShowConfirmDelete(!showConfirmDelete);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      setIsConfirmButtonLoading(true);
+      await deleteMutation.mutateAsync(roleToDelete);
+      setShowConfirmDelete(!showConfirmDelete);
+      setIsConfirmButtonLoading(false);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const sortedRoles = matchSorter(roles || [], _q, { keys: ['name', 'description'] });
@@ -190,14 +239,26 @@ const RoleListPage = () => {
                       </Text>
                     </Td>
                     <Td>
-                      <CheckPermissions permissions={permissions.updateRole}>
-                        <IconButton
-                          onClick={() => handleClickEdit(role.id)}
-                          noBorder
-                          icon={<EditIcon />}
-                          label="Edit"
-                        />
-                      </CheckPermissions>
+                      <Row>
+                        <CheckPermissions permissions={permissions.updateRole}>
+                          <IconButton
+                            onClick={() => handleClickEdit(role.id)}
+                            noBorder
+                            icon={<EditIcon />}
+                            label="Edit"
+                          />
+                        </CheckPermissions>
+                        {checkCanDeleteRole(role) && (
+                          <CheckPermissions permissions={permissions.deleteRole}>
+                            <IconButton
+                              onClick={() => handleClickDelete(role.id)}
+                              noBorder
+                              icon={<DeleteIcon />}
+                              label="Delete"
+                            />
+                          </CheckPermissions>
+                        )}
+                      </Row>
                     </Td>
                   </Tr>
                 ))}
@@ -205,6 +266,12 @@ const RoleListPage = () => {
             </Table>
           )}
         </CustomContentLayout>
+        <ConfirmDialog
+          isConfirmButtonLoading={isConfirmButtonLoading}
+          onConfirm={handleConfirmDelete}
+          onToggleDialog={handleShowConfirmDelete}
+          isOpen={showConfirmDelete}
+        />
       </Main>
     </Layout>
   );
