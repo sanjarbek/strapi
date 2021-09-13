@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Main,
   HeaderLayout,
@@ -24,6 +24,7 @@ import {
   useNotification,
 } from '@strapi/helper-plugin';
 
+import UsersPermissions from '../../../components/UsersPermissions';
 import getTrad from '../../../utils/getTrad';
 import pluginId from '../../../pluginId';
 import { usePlugins, useFetchRole } from '../../../hooks';
@@ -38,8 +39,9 @@ const EditPage = () => {
   const {
     params: { id },
   } = useRouteMatch(`/settings/${pluginId}/roles/:id`);
-  const { isLoading: isLoadingPlugins } = usePlugins();
+  const { isLoading: isLoadingPlugins, routes, policies } = usePlugins();
   const { role, onSubmitSucceeded, isLoading: isLoadingRole } = useFetchRole(id);
+  const permissionsRef = useRef();
 
   const handleCreateRoleSubmit = async data => {
     // Set loading state
@@ -163,6 +165,14 @@ const EditPage = () => {
                     </Grid>
                   </Stack>
                 </Box>
+                {!isLoadingPlugins && !isLoadingRole && (
+                  <UsersPermissions
+                    ref={permissionsRef}
+                    permissions={role.permissions}
+                    routes={routes}
+                    policies={policies}
+                  />
+                )}
               </Stack>
             </CustomContentLayout>
           </Form>
